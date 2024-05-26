@@ -1,7 +1,5 @@
 use std::{collections::HashMap, iter::once};
 
-use itertools::Itertools;
-
 fn frequency_counter(text: &String) -> HashMap<u8, usize> {
     text.as_bytes().iter().fold(HashMap::new(), |mut acc, &c| {
         *acc.entry(c).or_insert(0) += 1;
@@ -11,7 +9,7 @@ fn frequency_counter(text: &String) -> HashMap<u8, usize> {
 
 fn frequency_list(frequency_counter: &HashMap<u8, usize>) -> Vec<(u8, usize)> {
     let mut frequency_list = frequency_counter
-        .into_iter()
+        .iter()
         .map(|(c, f)| (*c, *f))
         .collect::<Vec<_>>();
     frequency_list.sort_by(|(char_1, freq_1), (char_2, freq_2)| {
@@ -65,11 +63,11 @@ fn huffman_tree(frequency_list: &[(u8, usize)]) -> HuffmanTreeNode {
         (value_node, character_node)
     };
 
-    return HuffmanTreeNode::Value(HuffmanTreeNodeValue {
+    HuffmanTreeNode::Value(HuffmanTreeNodeValue {
         value: left.value() + right.value(),
         left: Some(Box::new(left)),
         right: Some(Box::new(right)),
-    });
+    })
 }
 
 // TODO(Otavio): Change this to be a more memory efficient data structure
@@ -81,7 +79,7 @@ fn huffman_codes(tree: &HuffmanTreeNode) -> HuffmanCode {
     let mut codes = HuffmanCode::new();
     fn rec_huffman_codes(
         branch: &Option<Box<HuffmanTreeNode>>,
-        code: &Vec<u8>,
+        code: &[u8],
         codes: &mut HuffmanCode,
     ) {
         match branch {
@@ -90,16 +88,8 @@ fn huffman_codes(tree: &HuffmanTreeNode) -> HuffmanCode {
                     codes.insert(node.character, code.to_vec());
                 }
                 HuffmanTreeNode::Value(node) => {
-                    rec_huffman_codes(
-                        &node.left,
-                        &code.iter().chain(once(&b'0')).cloned().collect(),
-                        codes,
-                    );
-                    rec_huffman_codes(
-                        &node.right,
-                        &code.iter().chain(once(&b'1')).cloned().collect(),
-                        codes,
-                    );
+                    rec_huffman_codes(&node.left, &code.iter().chain(once(&b'0')).cloned().collect::<Vec<u8>>(), codes);
+                    rec_huffman_codes(&node.right, &code.iter().chain(once(&b'1')).cloned().collect::<Vec<u8>>(), codes);
                 }
             },
             None => {}
@@ -114,10 +104,10 @@ fn huffman_codes(tree: &HuffmanTreeNode) -> HuffmanCode {
             rec_huffman_codes(&node.right, &[b'1'].to_vec(), &mut codes);
         }
     }
-    return codes;
+    codes
 }
 
-fn huffman_encode_string(text: &String) -> (String, HashMap<Vec<u8>, u8>) {
+fn huffman_encode_string(text: &String) -> (Vec<u8>, HashMap<Vec<u8>, u8>) {
     let frequency_counter = frequency_counter(text);
     let frequency_list = frequency_list(&frequency_counter);
     let tree = huffman_tree(&frequency_list);
@@ -125,15 +115,14 @@ fn huffman_encode_string(text: &String) -> (String, HashMap<Vec<u8>, u8>) {
     let encoded = text
         .as_bytes()
         .iter()
-        .map(|c| {
+        .flat_map(|c| {
             codes
                 .get(c)
                 .expect("Character not encoded")
                 .iter()
-                .map(|c| *c as char)
+                .map(|&c| if c == b'1' { 1 } else { 0 })
         })
-        .flatten()
-        .join("");
+        .collect();
     let decode_codes = codes
         .into_iter()
         .map(|(c, code)| (code, c))
@@ -145,14 +134,8 @@ pub fn huffman_encode(text: &String) -> (Vec<u8>, HashMap<Vec<u8>, u8>) {
     let (encoded, codes) = huffman_encode_string(text);
     (
         encoded
-            .chars()
             .chunks(8)
-            .into_iter()
-            .map(|bytes| {
-                bytes.fold(0, |acc, b| {
-                    acc << 1 | (b.to_digit(2).expect("Failed to convert byte to num") == 1) as u8
-                })
-            })
+            .map(|bytes| bytes.iter().fold(0, |acc, b| acc << 1 | b))
             .collect::<Vec<u8>>(),
         codes,
     )
@@ -209,7 +192,7 @@ mod tests {
     fn test_huffman_encode_string() {
         let text = String::from("AABCBAD");
         let (encoded, decode_codes) = huffman_encode_string(&text);
-        let expected_encoded = String::from("1100010001011");
+        let expected_encoded = vec![1, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 1];
         let expected_decode_codes = [
             (vec![b'1'], b'A'),
             (vec![b'0', b'0'], b'B'),
