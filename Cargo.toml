@@ -1,0 +1,18 @@
+[package]
+name = "huffman-coding"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+itertools = { version = "0.13" }
+rand = { version = "0.8" }
+
+[dev-dependencies]
+criterion = "0.5"
+
+[[bench]]
+name = "huffman_benchmark"
+harness = false
+
+[lib]
+name = "huffman_coding"
