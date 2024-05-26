@@ -16,3 +16,6 @@ harness = false
 
 [lib]
 name = "huffman_coding"
+
+[profile.release]
+debug = true

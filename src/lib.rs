@@ -2,7 +2,7 @@ use std::{collections::HashMap, iter::once};
 
 use itertools::Itertools;
 
-fn frequecy_counter(text: &String) -> HashMap<u8, usize> {
+fn frequency_counter(text: &String) -> HashMap<u8, usize> {
     text.as_bytes().iter().fold(HashMap::new(), |mut acc, &c| {
         *acc.entry(c).or_insert(0) += 1;
         acc
@@ -118,21 +118,22 @@ fn huffman_codes(tree: &HuffmanTreeNode) -> HuffmanCode {
 }
 
 fn huffman_encode_string(text: &String) -> (String, HashMap<Vec<u8>, u8>) {
-    let frequency_counter = frequecy_counter(text);
+    let frequency_counter = frequency_counter(text);
     let frequency_list = frequency_list(&frequency_counter);
     let tree = huffman_tree(&frequency_list);
     let codes = huffman_codes(&tree);
     let encoded = text
         .as_bytes()
         .iter()
-        .map(|c| codes.get(c).expect("Character not encoded"))
-        .fold(String::new(), |acc, code| {
-            format!(
-                "{}{}",
-                acc,
-                code.iter().map(|c| *c as char).collect::<String>()
-            )
-        });
+        .map(|c| {
+            codes
+                .get(c)
+                .expect("Character not encoded")
+                .iter()
+                .map(|c| *c as char)
+        })
+        .flatten()
+        .join("");
     let decode_codes = codes
         .into_iter()
         .map(|(c, code)| (code, c))
@@ -292,7 +293,7 @@ mod tests {
     #[test]
     fn test_frequency_counter() {
         let text = "AABCBAD".to_string();
-        let result = frequecy_counter(&text);
+        let result = frequency_counter(&text);
         let expected: HashMap<u8, usize> = [(b'A', 3), (b'B', 2), (b'C', 1), (b'D', 1)]
             .into_iter()
             .collect();
